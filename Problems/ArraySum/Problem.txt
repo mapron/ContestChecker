@@ -1,0 +1,5 @@
+Problem "Sum of array"
+
+Find sum of all elements in input array
+Input: size N, then N integer elements, value is between -10^9 and +10^9. N is between 1 and 100.
+Output: sum of all values

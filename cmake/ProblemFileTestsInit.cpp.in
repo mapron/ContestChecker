@@ -1,0 +1,43 @@
+/*
+ * Copyright (C) 2025 Smirnov Vladimir / mapron1@gmail.com
+ * SPDX-License-Identifier: CC0-1.0
+ * See LICENSE file for details.
+ */
+
+#include "@problemHeaders@"
+#include "CommonTestUtils.h"
+
+#include <fstream>
+
+namespace {
+
+using namespace @problemName@ProblemDetails;
+
+using Problem = AbstractProblem<Input, Output, "@problemName@">;
+
+TestCaseList loadTests()
+{
+	const std::string baseDir = "@problemPath@/";
+	const size_t caseCount = @caseCount@;
+	TestCaseList result(caseCount);
+	for (size_t i = 0; i < caseCount; ++i) {
+		std::ifstream is_input;
+		is_input.exceptions(std::ifstream::failbit);
+		is_input.open(baseDir + "input_" + std::to_string(i) + ".txt");
+		
+		std::ifstream is_output;
+		is_output.exceptions(std::ifstream::failbit);
+		is_output.open(baseDir + "output_" + std::to_string(i) + ".txt");
+		
+		result[i].m_input.readFrom(is_input);
+		result[i].m_output.readFrom(is_output);
+	}
+	return result;
+}
+
+[[maybe_unused]] const CallbackList g_reg([] {
+	static const TestCaseList s_tests = loadTests();
+	Problem::registerTestSet(&s_tests, "file");
+});
+
+}

@@ -1,0 +1,20 @@
+/*
+ * Copyright (C) 2025 Smirnov Vladimir / mapron1@gmail.com
+ * SPDX-License-Identifier: CC0-1.0
+ * See LICENSE file for details.
+ */
+
+#include "@problemHeaders@"
+#include "CommonTestUtils.h"
+
+namespace {
+
+using namespace @problemName@ProblemDetails;
+
+using Problem = AbstractProblem<Input, Output, "@problemName@">;
+
+[[maybe_unused]] const CallbackList g_reg([] {
+    AbstractProblemDetails::registerRunner(Problem::run, "@problemName@");
+});
+
+}
