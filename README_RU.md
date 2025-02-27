@@ -37,6 +37,16 @@ ContestChecker --problem ArraySum
 ```
 Если вместо запуска тестов необходимо запустить бенчмарк, вы можете это сделать используя параметр task:  
 ```
-ContestChecker --problem ArraySum --task RunBenchmark
+ContestChecker --problem ArraySum --task Benchmark
 ```
 примечание: в режиме бенчмарка выходные данные решения игнорируются.  
+Если же необходимо вместо проверки выхода просто вывести его в консоль, можно воспользоваться  
+```
+ContestChecker --problem ArraySum --task PrintOutput
+```
+Так же есть возможность задать пользовательские файлы для ввода и вывода (в т.ч. использовать stdin/stderr/stdout):  
+```
+ContestChecker --problem ArraySum --test-input /path/to/input_0.txt --test-output /path/to/output_0.txt
+ContestChecker --problem ArraySum --test-input stdin --test-output stdin
+ContestChecker --print-to /path/to/output.txt --log-to /path/to/log.txt
+```

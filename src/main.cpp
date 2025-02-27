@@ -28,19 +28,17 @@ int main(int argc, char** argv)
         CallbackList::callAll();
 
         CLIParams params;
-        params.m_problemNameFilter                 = "";
-        params.m_implNameFilter                    = "";
-        params.m_implNameOrdering.m_order["naive"] = 1;
-        params.m_loggingStream                     = &std::cout;
         if (!params.parseArgs(std::cerr, argc, argv))
             return 1;
+
+        params.createStreams();
 
         auto& allDesc = AbstractProblemDetails::getSortedProblemRunners();
         for (auto&& cb : allDesc) {
             if (!cb.m_cb(params))
                 return 1;
         }
-        std::cout << "Peak memory consumption was: " << getPeakBytes() << " bytes.\n";
+        (*params.m_loggingStream) << "Peak memory consumption was: " << getPeakBytes() << " bytes.\n";
     }
     catch (std::runtime_error& ex) {
         std::cerr << "std::exception was thrown:" << ex.what() << "\n";

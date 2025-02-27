@@ -7,6 +7,28 @@
 
 #include <iostream>
 #include <set>
+#include <fstream>
+#include <sstream>
+
+struct CLIParams::Impl {
+    std::ifstream m_testInput;
+    std::ifstream m_testOutput;
+    std::ofstream m_print;
+    std::ofstream m_log;
+
+    std::ostringstream m_nullStream;
+};
+
+CLIParams::CLIParams()
+    : m_impl(std::make_unique<Impl>())
+{
+    m_implNameOrdering.m_order["naive"] = 1;
+    m_loggingStream                     = &std::cout;
+}
+
+CLIParams::~CLIParams()
+{
+}
 
 bool CLIParams::parseArgs(std::ostream& logStream, int argc, char** argv)
 {
@@ -42,7 +64,10 @@ bool CLIParams::parseArgs(std::ostream& logStream, const std::map<std::string, s
         "impl",
         "student",
         "task",
-        "file",
+        "test-input",
+        "test-output",
+        "print-to",
+        "log-to",
     };
     bool result = true;
     for (const auto& [key, value] : argsMap) {
@@ -66,13 +91,23 @@ bool CLIParams::parseArg(std::ostream& logStream, const std::string& option, con
         m_implNameFilter = value;
     else if (option == "student")
         m_studentFilter = value;
-    else if (option == "file")
-        m_filename = value;
+
+    else if (option == "test-input")
+        m_testInputFile = value;
+    else if (option == "test-output")
+        m_testOutputFile = value;
+    else if (option == "print-to")
+        m_printFile = value;
+    else if (option == "log-to")
+        m_logFile = value;
+
     else if (option == "task") {
-        if (value == "CheckFromFile")
-            m_task = Task::CheckFromFile;
-        if (value == "RunBenchmark")
-            m_task = Task::RunBenchmark;
+        if (value == "CheckOutput")
+            m_task = Task::CheckOutput;
+        else if (value == "PrintOutput")
+            m_task = Task::PrintOutput;
+        else if (value == "Benchmark")
+            m_task = Task::Benchmark;
     }
     return true;
 }
@@ -90,4 +125,54 @@ bool CLIParams::isFilteredImpl(std::string_view implName) const
 bool CLIParams::isFilteredStudent(std::string_view name) const
 {
     return (!m_studentFilter.empty() && name != m_studentFilter);
+}
+
+void CLIParams::createStreams()
+{
+    auto makeInputFile = [](const std::string& name, std::istream*& stream, std::ifstream& fstream) {
+        if (name.empty())
+            return;
+
+        if (name == g_stdin) {
+            stream = &std::cin;
+            return;
+        }
+
+        fstream.exceptions(std::ifstream::failbit);
+        fstream.open(name);
+        stream = &fstream;
+    };
+    auto& nullStream     = this->m_impl->m_nullStream;
+    auto  makeOutputFile = [&nullStream](const std::string& name, std::ostream*& stream, std::ofstream& fstream) {
+        if (name.empty())
+            return;
+
+        if (name == g_stdout) {
+            stream = &std::cout;
+            return;
+        }
+        if (name == g_stderr) {
+            stream = &std::cerr;
+            return;
+        }
+        if (name == g_null) {
+            stream = &nullStream;
+            return;
+        }
+
+        fstream.exceptions(std::ofstream::failbit);
+        fstream.open(name);
+        stream = &fstream;
+    };
+    if (m_task == Task::PrintOutput) {
+        if (m_printFile.empty())
+            m_printFile = g_stdout;
+        if (m_logFile.empty())
+            m_logFile = g_null;
+    }
+    makeInputFile(m_testInputFile, m_testInputStream, m_impl->m_testInput);
+    makeInputFile(m_testOutputFile, m_testOutputStream, m_impl->m_testOutput);
+
+    makeOutputFile(m_printFile, m_printStream, m_impl->m_print);
+    makeOutputFile(m_logFile, m_loggingStream, m_impl->m_log);
 }

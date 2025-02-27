@@ -36,9 +36,19 @@ You can filter specific problem via
 ```
 ContestChecker --problem ArraySum
 ```
-You can run benchmarks providing task parameter like this:
+You can run benchmarks providing task parameter like this:  
 
 ```
-ContestChecker --problem ArraySum --task RunBenchmark
+ContestChecker --problem ArraySum --task Benchmark
 ```
-Note: in benchmark mode, checking output is ignored.
+Note: in benchmark mode, checking output is ignored.  
+If you wast to print program output instead of checking it, you can use this task option:  
+```
+ContestChecker --problem ArraySum --task PrintOutput
+```
+Also you can customize check input files (other test data will be ignored) or set print/logging to different streamm:  
+```
+ContestChecker --problem ArraySum --test-input /path/to/input_0.txt --test-output /path/to/output_0.txt
+ContestChecker --problem ArraySum --test-input stdin --test-output stdin
+ContestChecker --print-to /path/to/output.txt --log-to /path/to/log.txt
+```

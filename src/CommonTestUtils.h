@@ -161,17 +161,22 @@ struct AbstractProblem final {
             if (params.isFilteredImpl(solution.m_implName) || params.isFilteredStudent(solution.m_studentName))
                 continue;
 
-            if (params.m_task == CLIParams::Task::RunTests && !runTests(params, solution))
+            if (params.m_task == CLIParams::Task::CheckOutput && !runTests(params, solution))
+                return false;
+            if (params.m_task == CLIParams::Task::PrintOutput && !runTests(params, solution))
                 return false;
 
-            if (params.m_task == CLIParams::Task::RunBenchmark && !runBenchmark(params, solution))
+            if (params.m_task == CLIParams::Task::Benchmark && !runBenchmark(params, solution))
                 return false;
         }
         logger << "Problem '" << s_problemName;
-        if (params.m_task == CLIParams::Task::RunTests)
+        if (params.m_task == CLIParams::Task::CheckOutput)
             logger << "' - all tests passed!\n";
-        if (params.m_task == CLIParams::Task::RunBenchmark)
+        if (params.m_task == CLIParams::Task::PrintOutput)
+            logger << "' - finished!\n";
+        if (params.m_task == CLIParams::Task::Benchmark)
             logger << "' - end of benchmark\n";
+        logger << std::flush;
         return true;
     }
 
@@ -181,11 +186,31 @@ struct AbstractProblem final {
         const auto    start  = getCurrentMicroseconds();
         logger << "Starting problem '" << s_problemName
                << "' student '" << solution.m_studentName
-               << "' solution '" << solution.m_implName << "' tests...\n";
+               << "' solution '" << solution.m_implName << "' tests...\n" << std::flush;
+        TestCaseList customSource(1);
+        bool         useCustomSource = false;
+        const bool needCheck = params.m_task == CLIParams::Task::CheckOutput;
+        if (params.m_testInputStream) {
+            useCustomSource = true;
+            customSource[0].m_input.readFrom(*params.m_testInputStream);
+        }
+        if (params.m_testOutputStream) {
+            useCustomSource = true;
+            customSource[0].m_output.readFrom(*params.m_testOutputStream);
+        }
+        if (useCustomSource) {
+            auto& customList = getTestCaseSourceList();
+            customList.resize(1);
+            customList[0].m_sourceName = params.useStdin() ? "cli-stdin" : "cli-file";
+            customList[0].m_cases      = &customSource;
+        }
+        size_t count = 0;
         for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
             for (int tcaseIndex = -1; const TestCase& tcase : *tcaseSource.m_cases) {
                 tcaseIndex++;
+                count++;
                 const auto calculatedOutput = solution.m_transform(tcase.m_input);
+                if (needCheck) {
 
                 if (calculatedOutput != tcase.m_output) {
                     const std::string tcaseIndexStr = "[" + std::string(tcaseSource.m_sourceName) + "/" + std::to_string(tcaseIndex) + "]";
@@ -198,13 +223,18 @@ struct AbstractProblem final {
                     logger << "\n";
                     logger << " but calculated" << tcaseIndexPad << " is: ";
                     calculatedOutput.log(logger);
-                    logger << "\n";
+                    logger << "\n" << std::flush;
                     return false;
+                }
+                } else {
+                    tcase.m_output.writeTo(*params.m_printStream);
+                    *params.m_printStream << "\n" << std::flush;
                 }
             }
         }
         const auto end = getCurrentMicroseconds();
-        logger << "Solutions are correct, run time: " << (end - start) << " us.\n";
+        if (needCheck)
+            logger << "Solutions are correct, total cases: " << count << ", run time: " << (end - start) << " us.\n" << std::flush;
         return true;
     }
 
