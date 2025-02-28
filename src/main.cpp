@@ -6,22 +6,6 @@
 
 #include "CommonTestUtils.h"
 
-#ifdef _WIN32
-#include <Windows.h>
-#include <psapi.h>
-int64_t getPeakBytes()
-{
-    PROCESS_MEMORY_COUNTERS counters;
-    GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters));
-    return counters.PeakWorkingSetSize;
-}
-#else
-int64_t getPeakBytes()
-{
-    return 0;
-}
-#endif
-
 int main(int argc, char** argv)
 {
     try {
@@ -33,12 +17,14 @@ int main(int argc, char** argv)
 
         params.createStreams();
 
-        auto& allDesc = AbstractProblemDetails::getSortedProblemRunners();
+        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::PeakHeap });
+        auto&              allDesc = AbstractProblemDetails::getSortedProblemRunners();
         for (auto&& cb : allDesc) {
             if (!cb.m_cb(params))
                 return 1;
         }
-        (*params.m_loggingStream) << "Peak memory consumption was: " << getPeakBytes() << " bytes.\n";
+        (*params.m_loggingStream) << "Finished";
+        topCounter.printTo(*params.m_loggingStream, true);
     }
     catch (std::runtime_error& ex) {
         std::cerr << "std::exception was thrown:" << ex.what() << "\n";

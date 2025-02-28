@@ -10,12 +10,30 @@ include(cmake/config.cmake)
 
 add_executable(ContestChecker
 	src/main.cpp
+	src/CommandLine.cpp
+	src/CommandLine.h
 	src/CommonProblemTypes.h
 	src/CommonTestUtils.h
-	src/CommandLine.h
-	src/CommandLine.cpp
+	src/CustomAlloc.h
+	src/PerformanceCounter.h
+	src/PerformanceCounter.cpp
 )
+option(ENABLE_NEW_DELETE_HOOK "Enable replacement for new() and delete()" ON)
+if (ENABLE_NEW_DELETE_HOOK)
+	target_sources(ContestChecker PRIVATE src/CustomAlloc.cpp)
+else()
+	target_sources(ContestChecker PRIVATE src/DefaultAlloc.cpp)
+endif()
+
+cmake_policy(SET CMP0167 OLD)
+find_package(Boost)
+
 target_include_directories(ContestChecker PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/src)
+
+if (Boost_INCLUDE_DIR)
+	target_include_directories(ContestChecker PRIVATE ${Boost_INCLUDE_DIR})
+endif()
+
 set(generatedInit ${CMAKE_CURRENT_BINARY_DIR}/GeneratedInit)
 file(MAKE_DIRECTORY ${generatedInit})
 

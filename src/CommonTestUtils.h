@@ -7,9 +7,9 @@
 
 #include "CommandLine.h"
 #include "CommonProblemTypes.h"
+#include "PerformanceCounter.h"
 
 #include <algorithm>
-#include <chrono>
 
 /// Non-heap allocating linked list of funtion pointers.
 /// This list is global for process.
@@ -49,17 +49,6 @@ struct CallbackList {
         }
     }
 };
-
-namespace {
-
-/// Current precision clock in microseconds
-int64_t getCurrentMicroseconds()
-{
-    auto now = std::chrono::steady_clock::now().time_since_epoch();
-    return std::chrono::duration_cast<std::chrono::microseconds>(now).count();
-}
-
-}
 
 /// Helper class for ability to store string literals as NTTP (not-type template parameter)
 template<size_t N>
@@ -182,14 +171,16 @@ struct AbstractProblem final {
 
     static bool runTests(const CLIParams& params, const Solution& solution)
     {
-        std::ostream& logger = *params.m_loggingStream;
-        const auto    start  = getCurrentMicroseconds();
+        std::ostream&      logger = *params.m_loggingStream;
+        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::CpuClock });
+
         logger << "Starting problem '" << s_problemName
                << "' student '" << solution.m_studentName
-               << "' solution '" << solution.m_implName << "' tests...\n" << std::flush;
+               << "' solution '" << solution.m_implName << "' tests...\n"
+               << std::flush;
         TestCaseList customSource(1);
         bool         useCustomSource = false;
-        const bool needCheck = params.m_task == CLIParams::Task::CheckOutput;
+        const bool   needCheck       = params.m_task == CLIParams::Task::CheckOutput;
         if (params.m_testInputStream) {
             useCustomSource = true;
             customSource[0].m_input.readFrom(*params.m_testInputStream);
@@ -204,51 +195,64 @@ struct AbstractProblem final {
             customList[0].m_sourceName = params.useStdin() ? "cli-stdin" : "cli-file";
             customList[0].m_cases      = &customSource;
         }
+
+        if (params.m_enableAllocTrace)
+            topCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls });
         size_t count = 0;
         for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
             for (int tcaseIndex = -1; const TestCase& tcase : *tcaseSource.m_cases) {
                 tcaseIndex++;
                 count++;
-                const auto calculatedOutput = solution.m_transform(tcase.m_input);
-                if (needCheck) {
+                const std::string tcaseIndexStr = "[" + std::string(tcaseSource.m_sourceName) + "/" + std::to_string(tcaseIndex) + "]";
 
-                if (calculatedOutput != tcase.m_output) {
-                    const std::string tcaseIndexStr = "[" + std::string(tcaseSource.m_sourceName) + "/" + std::to_string(tcaseIndex) + "]";
-                    const std::string tcaseIndexPad(tcaseIndexStr.size(), ' ');
-                    logger << "For problem input " << tcaseIndexStr << ": ";
-                    tcase.m_input.log(logger);
-                    logger << "\n";
-                    logger << "expected output" << tcaseIndexPad << " is: ";
-                    tcase.m_output.log(logger);
-                    logger << "\n";
-                    logger << " but calculated" << tcaseIndexPad << " is: ";
-                    calculatedOutput.log(logger);
-                    logger << "\n" << std::flush;
-                    return false;
-                }
+                PerformanceCounter caseCounter(std::array{ Perf::ExecTime });
+                if (params.m_enableAllocTrace)
+                    caseCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls });
+                const auto calculatedOutput = solution.m_transform(tcase.m_input);
+
+                if (needCheck) {
+                    if (params.m_printAllCases) {
+                        logger << "Case " << tcaseIndexStr;
+                        caseCounter.printTo(logger, true);
+                    }
+                    if (calculatedOutput != tcase.m_output) {
+                        const std::string tcaseIndexPad(tcaseIndexStr.size(), ' ');
+                        logger << "For problem input " << tcaseIndexStr << ": ";
+                        tcase.m_input.log(logger);
+                        logger << "\n";
+                        logger << "expected output" << tcaseIndexPad << " is: ";
+                        tcase.m_output.log(logger);
+                        logger << "\n";
+                        logger << " but calculated" << tcaseIndexPad << " is: ";
+                        calculatedOutput.log(logger);
+                        logger << "\n"
+                               << std::flush;
+                        return false;
+                    }
                 } else {
                     tcase.m_output.writeTo(*params.m_printStream);
-                    *params.m_printStream << "\n" << std::flush;
+                    *params.m_printStream << "\n"
+                                          << std::flush;
                 }
             }
         }
-        const auto end = getCurrentMicroseconds();
-        if (needCheck)
-            logger << "Solutions are correct, total cases: " << count << ", run time: " << (end - start) << " us.\n" << std::flush;
+        if (!needCheck)
+            return true;
+        logger << "Solutions are correct, total cases: " << count;
+        topCounter.printTo(logger, true);
         return true;
     }
 
     static bool runBenchmark(const CLIParams& params, const Solution& solution)
     {
-        std::ostream& logger = *params.m_loggingStream;
-        const auto    start  = getCurrentMicroseconds();
+        std::ostream&      logger = *params.m_loggingStream;
+        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::CpuClock });
         logger << "Starting problem '" << s_problemName
                << "' student '" << solution.m_studentName
                << "' solution '" << solution.m_implName
                << "' benchmark (" << params.m_benchmarkTimeLimitMS << " ms limit)...\n"
                << std::flush;
-        int     iterationCount = 0;
-        int64_t elapsed        = 0;
+        int iterationCount = 0;
         for (; iterationCount < 1000000; ++iterationCount) {
             for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
                 for (const TestCase& tcase : *tcaseSource.m_cases) {
@@ -256,11 +260,12 @@ struct AbstractProblem final {
                 }
             }
 
-            elapsed = (getCurrentMicroseconds() - start) / 1000;
-            if (elapsed > params.m_benchmarkTimeLimitMS)
+            if (topCounter.isTimedOut(params.m_benchmarkTimeLimitMS * 1000))
                 break;
         }
-        logger << "Benchmark ended, elapsed time: " << elapsed << " ms, iterations: " << iterationCount << "\n";
+
+        logger << "Benchmark ended, iterations: " << iterationCount;
+        topCounter.printTo(logger, true);
         return true;
     }
 };

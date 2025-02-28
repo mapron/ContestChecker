@@ -58,6 +58,8 @@ public:
     Task m_task = Task::CheckOutput;
 
     int64_t m_benchmarkTimeLimitMS = 10000; // 10 sec.
+    bool    m_printAllCases        = false;
+    bool    m_enableAllocTrace     = false;
 
 public:
     CLIParams();

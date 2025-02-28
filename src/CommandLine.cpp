@@ -10,6 +10,14 @@
 #include <fstream>
 #include <sstream>
 
+namespace {
+bool isTrueValue(const std::string& value)
+{
+    return !(value.empty() || value == "0" || value == "false");
+}
+
+}
+
 struct CLIParams::Impl {
     std::ifstream m_testInput;
     std::ifstream m_testOutput;
@@ -68,6 +76,8 @@ bool CLIParams::parseArgs(std::ostream& logStream, const std::map<std::string, s
         "test-output",
         "print-to",
         "log-to",
+        "print-all-cases",
+        "enable-alloc-trace",
     };
     bool result = true;
     for (const auto& [key, value] : argsMap) {
@@ -100,6 +110,11 @@ bool CLIParams::parseArg(std::ostream& logStream, const std::string& option, con
         m_printFile = value;
     else if (option == "log-to")
         m_logFile = value;
+
+    else if (option == "print-all-cases")
+        m_printAllCases = isTrueValue(value);
+    else if (option == "enable-alloc-trace")
+        m_enableAllocTrace = isTrueValue(value);
 
     else if (option == "task") {
         if (value == "CheckOutput")
