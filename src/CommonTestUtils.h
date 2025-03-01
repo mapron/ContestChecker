@@ -246,7 +246,9 @@ struct AbstractProblem final {
     static bool runBenchmark(const CLIParams& params, const Solution& solution)
     {
         std::ostream&      logger = *params.m_loggingStream;
-        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::CpuClock });
+        PerformanceCounter topCounter(std::array{ Perf::ExecTime });
+        if (params.m_enableAllocTrace)
+            topCounter.enablePerf(Perf::TimeSpentAlloc);
         logger << "Starting problem '" << s_problemName
                << "' student '" << solution.m_studentName
                << "' solution '" << solution.m_implName

@@ -17,6 +17,8 @@ enum class Perf
 
     NewCalls,
     DeleteCalls,
+
+    TimeSpentAlloc,
 };
 namespace PerformanceCounterDetails {
 int64_t getCurrentNanoseconds();
@@ -64,6 +66,9 @@ public:
             case DeleteCalls:
                 flag = &m_enableDeleteCalls;
                 break;
+            case TimeSpentAlloc:
+                flag = &m_enableTimeSpentAlloc;
+                break;
         }
         if (*flag)
             return;
@@ -84,9 +89,10 @@ private:
     uint64_t m_startDeleteCalls     = 0;
     uint64_t m_startDeleteElapsedNs = 0;
 
-    bool m_enableExecTime    = false;
-    bool m_enableCpuClock    = false;
-    bool m_enablePeakHeap    = false;
-    bool m_enableNewCalls    = false;
-    bool m_enableDeleteCalls = false;
+    bool m_enableExecTime       = false;
+    bool m_enableCpuClock       = false;
+    bool m_enablePeakHeap       = false;
+    bool m_enableNewCalls       = false;
+    bool m_enableDeleteCalls    = false;
+    bool m_enableTimeSpentAlloc = false;
 };

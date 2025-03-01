@@ -109,6 +109,11 @@ void PerformanceCounter::start(Perf p)
             m_startDeleteCalls     = info.m_calls;
             m_startDeleteElapsedNs = info.m_timeSpentNanosec;
         } break;
+        case TimeSpentAlloc:
+        {
+            m_startNewElapsedNs    = CustomAlloc::getNewInfo().m_timeSpentNanosec;
+            m_startDeleteElapsedNs = CustomAlloc::getDeleteInfo().m_timeSpentNanosec;
+        } break;
     }
 }
 
@@ -142,6 +147,12 @@ void PerformanceCounter::printTo(std::ostream& os, bool addNewLine)
         os << ", delete() calls: " << info.m_calls
            << ", time spent in delete(): ";
         printTime(os, info.m_timeSpentNanosec / 1000);
+    }
+    if (m_enableTimeSpentAlloc) {
+        auto       elapsed = getCurrentMicroseconds() - m_startUS;
+        auto       ns      = (CustomAlloc::getNewInfo().m_timeSpentNanosec - m_startNewElapsedNs) + (CustomAlloc::getDeleteInfo().m_timeSpentNanosec - m_startDeleteElapsedNs);
+        const auto info    = CustomAlloc::getDeleteInfo() - CustomAlloc::Info{ m_startDeleteCalls, 0, m_startDeleteElapsedNs };
+        os << ", percent of time in new+delete: " << ((ns / 10) / elapsed) << "%";
     }
     if (addNewLine)
         os << "\n"
