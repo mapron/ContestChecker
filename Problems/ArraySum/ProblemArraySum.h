@@ -7,7 +7,7 @@
 
 #include "CommonProblemTypes.h"
 
-namespace ArraySumProblemDetails {
+inline namespace PROBLEM_NAMESPACE {
 
 using Input = CommonDetails::IntegralArrayIO<int>;
 

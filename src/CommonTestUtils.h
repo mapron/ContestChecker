@@ -62,7 +62,7 @@ struct CompileTimeLiteral {
 };
 
 /// Stores all run() functions for every problem.
-struct AbstractProblemDetails {
+struct AbstractProblemData {
     using Callback = bool (*)(const CLIParams& params);
     struct RunnerDesc {
         Callback         m_cb;
@@ -197,7 +197,7 @@ struct AbstractProblem final {
         }
 
         if (params.m_enableAllocTrace)
-            topCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls });
+            topCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls, Perf::TimeSpentAlloc });
         size_t count = 0;
         for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
             for (int tcaseIndex = -1; const TestCase& tcase : *tcaseSource.m_cases) {

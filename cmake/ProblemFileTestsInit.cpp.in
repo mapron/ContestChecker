@@ -11,8 +11,6 @@
 
 namespace {
 
-using namespace @problemName@ProblemDetails;
-
 using Problem = AbstractProblem<Input, Output, "@problemName@">;
 
 TestCaseList loadTests()

@@ -8,7 +8,6 @@
 #include "ProblemArraySum.h"
 
 namespace {
-using namespace ArraySumProblemDetails;
 
 const TestCaseList& getTests()
 {

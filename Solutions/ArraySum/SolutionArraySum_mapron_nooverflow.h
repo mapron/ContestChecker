@@ -10,7 +10,6 @@
 #include <numeric>
 
 namespace {
-using namespace ArraySumProblemDetails;
 
 Output solution(const Input& input)
 {

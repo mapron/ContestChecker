@@ -9,8 +9,6 @@
 
 namespace {
 
-using namespace @problemName@ProblemDetails;
-
 using Problem = AbstractProblem<Input, Output, "@problemName@">;
 
 [[maybe_unused]] const CallbackList g_reg([] {

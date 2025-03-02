@@ -18,7 +18,7 @@ int main(int argc, char** argv)
         params.createStreams();
 
         PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::PeakHeap });
-        auto&              allDesc = AbstractProblemDetails::getSortedProblemRunners();
+        auto&              allDesc = AbstractProblemData::getSortedProblemRunners();
         for (auto&& cb : allDesc) {
             if (!cb.m_cb(params))
                 return 1;
