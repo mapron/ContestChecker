@@ -13,6 +13,7 @@ add_executable(ContestChecker
 	src/CommandLine.cpp
 	src/CommandLine.h
 	src/CommonProblemTypes.h
+	src/CommonProblemTypesDetails.h
 	src/CommonTestUtils.h
 	src/CustomAlloc.h
 	src/PerformanceCounter.h

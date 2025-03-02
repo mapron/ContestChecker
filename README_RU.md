@@ -126,26 +126,28 @@ ContestChecker --problem ArraySum --test-input /path/to/input_0.txt --test-outpu
 Примечание: в таком режиме все остальные источники тестов будут пропущены.
 
 ## Пользовательские типы Input и Output 
-В большинстве случаев ваш header-файл проблемы `ProblemSomething.h`  просто использует готовые типы из CommonDetails:  
+В большинстве случаев ваш header-файл проблемы `ProblemSomething.h`  просто использует готовые типы из `CommonTypes`:  
 ```
 inline namespace PROBLEM_NAMESPACE {
 
-using Input = CommonDetails::IntegralArrayIO<int>;
-using Output = CommonDetails::IntegralScalar<int64_t>;
-using TestCaseList = CommonDetails::IOTransform<Input, Output>::TestCaseList;
+using Input = CommonTypes::IntegralArrayIO<int>;
+using Output = CommonTypes::IntegralScalar<int64_t>;
+using TestCaseList = CommonTypes::TestCaseList<Input, Output>;
 
 }
-
 ```
 Что если стандартные не подходят и необходим новый тип входа? В таком случае вместо using вы объявляете новый тип, который соответствует следующим требованиям:  
 ```
 struct Input {
-    auto operator<=>(const Input&) const = default; // Должен быть сравниваемым
+    SomeType m_someField;
+
+    bool operator==(const Input&) const = default; // Должен быть сравниваемым на равенство.
 
     void log(std::ostream& os) const { }     // Это необходимо для вывода в лог
     void writeTo(std::ostream& os) const { } // используется для записи в текстовый файл
     void readFrom(std::istream& is) {}       // используется для чтения из текстового формата (файл или stdin)
 };
+// same for Output if needed
 ```
 Если вы точно не собираетесь использовать файлы или стандартные потоки для кейсов (и пользоваться только C++ - тестами), вы можете оставить  `writeTo()` и`readFrom()` пустыми.
 

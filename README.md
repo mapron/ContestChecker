@@ -128,25 +128,27 @@ ContestChecker --problem ArraySum --test-input /path/to/input_0.txt --test-outpu
 Note: this will skip all other test sources.
 
 ## Writing custom Input and Output types
-Most of the time your `ProblemSomething.h` will look similar to this:  
+Most of the time your `ProblemSomething.h` will look similar to this, reusing types from `CommonTypes`:  
 ```
 inline namespace PROBLEM_NAMESPACE {
 
-using Input = CommonDetails::IntegralArrayIO<int>;
-using Output = CommonDetails::IntegralScalar<int64_t>;
-using TestCaseList = CommonDetails::IOTransform<Input, Output>::TestCaseList;
+using Input = CommonTypes::IntegralArrayIO<int>;
+using Output = CommonTypes::IntegralScalar<int64_t>;
+using TestCaseList = CommonTypes::TestCaseList<Input, Output>;
 
 }
-
 ```
-Just re-using types from CommonDetails. But what if you need to introduce new special input? This type must satisfy those requirements:  
+But what if you need to introduce new special input? This type must satisfy those requirements:  
 ```
 struct Input {
-    auto operator<=>(const Input&) const = default; // must be comparable
+    SomeType m_someField;
+
+    bool operator==(const Input&) const = default; // must be equal-comparable
 
     void log(std::ostream& os) const { }     // this used for pretty-printing in run log output.
     void writeTo(std::ostream& os) const { } // this is used when write to text file
     void readFrom(std::istream& is) {}       // this is used when reading from text file (or stdin)
 };
+// same for Output if needed
 ```
 If you are not planning to use `stdin/stdout/file` read and write you can make `writeTo()` and `readFrom()` empty.

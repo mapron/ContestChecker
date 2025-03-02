@@ -11,7 +11,8 @@
 
 namespace {
 
-using Problem = AbstractProblem<Input, Output, "@problemName@">;
+using Problem      = AbstractProblem<Input, Output, "@problemName@">;
+using TestCaseList = CommonTypes::TestCaseList<Input, Output>;
 
 TestCaseList loadTests()
 {

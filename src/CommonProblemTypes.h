@@ -5,47 +5,116 @@
  */
 #pragma once
 
-#include <concepts>
-#include <cstdint>
-#include <iostream>
+#include "CommonProblemTypesDetails.h"
+
 #include <limits>
-#include <string>
-#include <vector>
-
-namespace {
-
-/// Print integer array as {1, -2, 3}
-template<std::integral T>
-inline std::string prettyArray(const std::vector<T>& values)
-{
-    if (values.empty())
-        return "{}";
-    std::string out = "{" + std::to_string(values[0]);
-    for (size_t i = 1; i < values.size(); ++i)
-        out += ", " + std::to_string(values[i]);
-    return out + "}";
-}
-
-}
 
 /// Common problem inputs and outputs that can be reused between problems.
-namespace CommonDetails {
+namespace CommonTypes {
 
-template<std::integral T>
-using IntegralArray = std::vector<T>;
+template<Details::Numeric T>
+struct NumericScalarIO {
+    T m_value = 0;
 
-template<std::integral T>
-struct IntegralArrayIO {
-    IntegralArray<T> m_data;
+    auto operator<=>(const NumericScalarIO&) const = default;
 
-    auto operator<=>(const IntegralArrayIO&) const = default;
+    void log(std::ostream& os) const { Details::logValue(os, m_value); }
+    void writeTo(std::ostream& os) const { Details::writeToImpl(os, m_value); }
+    void readFrom(std::istream& is) & { Details::readFromImpl(is, m_value); }
+};
 
-    void log(std::ostream& os) const { os << prettyArray(m_data); }
+template<Details::Numeric T>
+struct NumericRangeIO {
+    T m_start = std::numeric_limits<T>::max();
+    T m_end   = std::numeric_limits<T>::max();
+
+    auto operator<=>(const NumericRangeIO&) const = default;
+
+    std::string toString() const { return Details::logValueAsString(*this); }
+
+    void log(std::ostream& os) const
+    {
+        os << "[";
+        Details::logValue(os, m_start);
+        os << ", ";
+        Details::logValue(os, m_end);
+        os << "]";
+    }
     void writeTo(std::ostream& os) const
     {
-        os << m_data.size();
-        for (size_t i = 0; i < m_data.size(); ++i)
-            os << m_data[i];
+        Details::writeToImpl(os, m_start);
+        Details::writeToImpl(os, m_end);
+    }
+    void readFrom(std::istream& is) &
+    {
+        Details::readFromImpl(is, m_start);
+        Details::readFromImpl(is, m_end);
+    }
+};
+
+template<Details::Numeric T>
+struct NumericPointIO {
+    T m_x = 0;
+    T m_y = 0;
+
+    auto operator<=>(const NumericPointIO&) const = default;
+
+    std::string toString() const { return Details::logValueAsString(*this); }
+
+    void log(std::ostream& os) const
+    {
+        os << "(";
+        Details::logValue(os, m_x);
+        os << ", ";
+        Details::logValue(os, m_y);
+        os << ")";
+    }
+    void writeTo(std::ostream& os) const
+    {
+        Details::writeToImpl(os, m_x);
+        Details::writeToImpl(os, m_y);
+    }
+    void readFrom(std::istream& is) &
+    {
+        Details::readFromImpl(is, m_x);
+        Details::readFromImpl(is, m_y);
+    }
+};
+
+struct StringScalarIO {
+    std::string m_text;
+
+    auto operator<=>(const StringScalarIO&) const = default;
+
+    void log(std::ostream& os) const
+    {
+        Details::logValue(os, m_text);
+    }
+    void writeTo(std::ostream& os) const
+    {
+        Details::writeToImpl(os, m_text);
+    }
+    void readFrom(std::istream& is) &
+    {
+        Details::readFromImpl(is, m_text);
+    }
+};
+
+template<typename T>
+struct ArrayIO {
+    std::vector<T> m_data;
+
+    bool operator==(const ArrayIO&) const = default;
+
+    void log(std::ostream& os) const { Details::logArray(os, m_data); }
+
+    void writeTo(std::ostream& os) const
+    {
+        os << m_data.size() << "\n";
+        for (size_t i = 0; i < m_data.size(); ++i) {
+            Details::writeToImpl(os, m_data[i]);
+            os << "\n";
+        }
     }
 
     void readFrom(std::istream& is) &
@@ -53,74 +122,98 @@ struct IntegralArrayIO {
         size_t count = 0;
         is >> count;
         m_data.resize(count);
-        for (size_t i = 0; i < count; ++i)
-            is >> m_data[i];
+        for (size_t i = 0; i < count; ++i) {
+            Details::readFromImpl(is, m_data[i]);
+        }
     }
 };
 
-template<std::integral T>
-struct IntegralScalar {
-    T m_count = 0;
+template<typename ArrayElemType, typename ValueType, Details::CompileTimeLiteral valueName>
+struct ArrayWithValueIO {
+    std::vector<ArrayElemType> m_data;
 
-    auto operator<=>(const IntegralScalar&) const = default;
+    ValueType m_value;
 
-    void log(std::ostream& os) const { os << m_count; }
-    void writeTo(std::ostream& os) const { os << m_count; }
-    void readFrom(std::istream& is) & { is >> m_count; }
+    bool operator==(const ArrayWithValueIO&) const = default;
+
+    void log(std::ostream& os) const
+    {
+        Details::logArray(os, m_data);
+        os << ", " << valueName.m_chars << "=";
+        Details::logValue(os, m_value);
+    }
+
+    void writeTo(std::ostream& os) const
+    {
+        os << m_data.size();
+        Details::writeToImpl(os, m_value);
+        os << "\n";
+        for (size_t i = 0; i < m_data.size(); ++i) {
+            Details::writeToImpl(os, m_data[i]);
+            os << "\n";
+        }
+    }
+
+    void readFrom(std::istream& is) &
+    {
+        size_t count = 0;
+        is >> count;
+        Details::readFromImpl(is, m_value);
+        m_data.resize(count);
+        for (size_t i = 0; i < count; ++i) {
+            Details::readFromImpl(is, m_data[i]);
+        }
+    }
 };
 
-template<std::integral T>
-struct IntegralRange {
-    T m_start = std::numeric_limits<T>::max();
-    T m_end   = std::numeric_limits<T>::max();
+template<typename T>
+struct MatrixIO {
+    size_t         m_rows = 0;
+    size_t         m_cols = 0;
+    std::vector<T> m_data;
 
-    auto operator<=>(const IntegralRange&) const = default;
+    T  get(size_t row, size_t col) const& { return m_data[row * m_cols + col]; }
+    T& get(size_t row, size_t col) & { return m_data[row * m_cols + col]; }
 
-    std::string toString() const { return "[" + std::to_string(m_start) + ", " + std::to_string(m_end) + "]"; }
+    bool operator==(const MatrixIO&) const = default;
 
-    void log(std::ostream& os) const { os << toString(); }
-    void writeTo(std::ostream& os) const { os << m_start << m_end; }
-    void readFrom(std::istream& is) & { is >> m_start >> m_end; }
-};
+    void log(std::ostream& os) const
+    {
+        os << m_rows << "x" << m_cols << "\n";
+        for (size_t i = 0; i < m_rows; ++i) {
+            Details::logArray(os, std::span<const T>(m_data.data() + i * m_cols, m_cols));
+            os << "\n";
+        }
+    }
+    void writeTo(std::ostream& os) const
+    {
+        os << m_rows << m_cols << "\n";
+        for (auto&& row : m_data) {
+            for (auto&& cell : row) {
+                Details::writeToImpl(os, cell);
+            }
+            os << "\n";
+        }
+    }
 
-template<std::integral T>
-struct IntegralPoint {
-    T m_x = 0;
-    T m_y = 0;
-
-    auto operator<=>(const IntegralPoint&) const = default;
-
-    std::string toString() const { return "(" + std::to_string(m_x) + ", " + std::to_string(m_y) + ")"; }
-
-    void log(std::ostream& os) const { os << toString(); }
-    void writeTo(std::ostream& os) const { os << m_x << m_y; }
-    void readFrom(std::istream& is) & { is >> m_x >> m_y; }
+    void readFrom(std::istream& is) &
+    {
+        is >> m_rows >> m_cols;
+        m_data.resize(m_rows * m_cols);
+        for (size_t i = 0; i < m_rows; ++i) {
+            for (size_t j = 0; j < m_cols; ++j) {
+                Details::readFromImpl(is, m_data[i * m_cols + j]);
+            }
+        }
+    }
 };
 
 template<class InputTypeT, class OutputTypeT>
-struct IOTransform final {
-    using InputType  = InputTypeT;
-    using OutputType = OutputTypeT;
-
-    struct TestCase {
-        InputType  m_input;
-        OutputType m_output;
-    };
-    using TestCaseList = std::vector<TestCase>;
-    struct TestCaseSource {
-        const TestCaseList* m_cases;
-        std::string_view    m_sourceName; // "compile", "source tree" etc.
-    };
-    using TestCaseSourceList = std::vector<TestCaseSource>;
-
-    using Transform = OutputType (*)(const InputType&);
-    struct Solution {
-        Transform        m_transform = nullptr;
-        std::string_view m_implName;
-        std::string_view m_studentName;
-    };
-
-    using SolutionList = std::vector<Solution>;
+struct TestCase {
+    InputTypeT  m_input;
+    OutputTypeT m_output;
 };
+template<class InputTypeT, class OutputTypeT>
+using TestCaseList = std::vector<TestCase<InputTypeT, OutputTypeT>>;
 
 }

@@ -97,16 +97,26 @@ struct AbstractProblemData {
 */
 template<class InputTypeT, class OutputTypeT, CompileTimeLiteral problemName>
 struct AbstractProblem final {
-    using TransformT         = CommonDetails::IOTransform<InputTypeT, OutputTypeT>;
-    using InputType          = TransformT::InputType;
-    using OutputType         = TransformT::OutputType;
-    using Solution           = TransformT::Solution;
-    using SolutionList       = TransformT::SolutionList;
-    using TestCase           = TransformT::TestCase;
-    using TestCaseSource     = TransformT::TestCaseSource;
-    using TestCaseSourceList = TransformT::TestCaseSourceList;
-    using Transform          = TransformT::Transform;
-    using TestCaseList       = TransformT::TestCaseList;
+    using InputType  = InputTypeT;
+    using OutputType = OutputTypeT;
+
+    using TestCase     = CommonTypes::TestCase<InputType, OutputType>;
+    using TestCaseList = CommonTypes::TestCaseList<InputType, OutputType>;
+
+    struct TestCaseSource {
+        const TestCaseList* m_cases;
+        std::string_view    m_sourceName; // "compile", "source tree" etc.
+    };
+    using TestCaseSourceList = std::vector<TestCaseSource>;
+
+    using Transform = OutputType (*)(const InputType&);
+    struct Solution {
+        Transform        m_transform = nullptr;
+        std::string_view m_implName;
+        std::string_view m_studentName;
+    };
+
+    using SolutionList = std::vector<Solution>;
 
     constexpr static std::string_view s_problemName = problemName.m_chars;
 
@@ -125,6 +135,12 @@ struct AbstractProblem final {
     {
         static TestCaseSourceList impls;
         return impls;
+    }
+
+    static void sortTestCaseSourceList()
+    {
+        TestCaseSourceList& list = getTestCaseSourceList();
+        std::sort(list.begin(), list.end(), [](auto& l, auto& r) { return l.m_sourceName < r.m_sourceName; });
     }
 
     static void registerTestSet(const TestCaseList* list, std::string_view source)
@@ -150,9 +166,9 @@ struct AbstractProblem final {
             if (params.isFilteredImpl(solution.m_implName) || params.isFilteredStudent(solution.m_studentName))
                 continue;
 
-            if (params.m_task == CLIParams::Task::CheckOutput && !runTests(params, solution))
+            if (params.m_task == CLIParams::Task::CheckOutput && !runTests(params, solution, true))
                 return false;
-            if (params.m_task == CLIParams::Task::PrintOutput && !runTests(params, solution))
+            if (params.m_task == CLIParams::Task::PrintOutput && !runTests(params, solution, false))
                 return false;
 
             if (params.m_task == CLIParams::Task::Benchmark && !runBenchmark(params, solution))
@@ -169,18 +185,10 @@ struct AbstractProblem final {
         return true;
     }
 
-    static bool runTests(const CLIParams& params, const Solution& solution)
+    static void registerCustomSource(const CLIParams& params)
     {
-        std::ostream&      logger = *params.m_loggingStream;
-        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::CpuClock });
-
-        logger << "Starting problem '" << s_problemName
-               << "' student '" << solution.m_studentName
-               << "' solution '" << solution.m_implName << "' tests...\n"
-               << std::flush;
-        TestCaseList customSource(1);
-        bool         useCustomSource = false;
-        const bool   needCheck       = params.m_task == CLIParams::Task::CheckOutput;
+        static TestCaseList customSource(1);
+        bool                useCustomSource = false;
         if (params.m_testInputStream) {
             useCustomSource = true;
             customSource[0].m_input.readFrom(*params.m_testInputStream);
@@ -195,10 +203,25 @@ struct AbstractProblem final {
             customList[0].m_sourceName = params.useStdin() ? "cli-stdin" : "cli-file";
             customList[0].m_cases      = &customSource;
         }
+    }
+
+    static bool runTests(const CLIParams& params, const Solution& solution, bool needCheck)
+    {
+        std::ostream& logger = *params.m_loggingStream;
+
+        logger << "Starting problem '" << s_problemName
+               << "' student '" << solution.m_studentName
+               << "' solution '" << solution.m_implName << "' tests...\n"
+               << std::flush;
+
+        registerCustomSource(params);
+
+        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::CpuClock });
 
         if (params.m_enableAllocTrace)
             topCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls, Perf::TimeSpentAlloc });
         size_t count = 0;
+        sortTestCaseSourceList();
         for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
             for (int tcaseIndex = -1; const TestCase& tcase : *tcaseSource.m_cases) {
                 tcaseIndex++;
@@ -245,17 +268,20 @@ struct AbstractProblem final {
 
     static bool runBenchmark(const CLIParams& params, const Solution& solution)
     {
-        std::ostream&      logger = *params.m_loggingStream;
-        PerformanceCounter topCounter(std::array{ Perf::ExecTime });
-        if (params.m_enableAllocTrace)
-            topCounter.enablePerf(Perf::TimeSpentAlloc);
+        std::ostream& logger = *params.m_loggingStream;
+
         logger << "Starting problem '" << s_problemName
                << "' student '" << solution.m_studentName
                << "' solution '" << solution.m_implName
                << "' benchmark (" << params.m_benchmarkTimeLimitMS << " ms limit)...\n"
                << std::flush;
+        registerCustomSource(params);
+
+        PerformanceCounter topCounter(std::array{ Perf::ExecTime });
+        if (params.m_enableAllocTrace)
+            topCounter.enablePerf(Perf::TimeSpentAlloc);
         int iterationCount = 0;
-        for (; iterationCount < 1000000; ++iterationCount) {
+        for (; iterationCount < 10'000'000; ++iterationCount) {
             for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
                 for (const TestCase& tcase : *tcaseSource.m_cases) {
                     solution.m_transform(tcase.m_input);
