@@ -187,22 +187,27 @@ struct AbstractProblem final {
 
     static void registerCustomSource(const CLIParams& params)
     {
-        static TestCaseList customSource(1);
-        bool                useCustomSource = false;
+        static TestCaseList s_customSource(1);
+        static bool         s_loadDone = false;
+        if (s_loadDone)
+            return;
+
+        bool useCustomSource = false;
         if (params.m_testInputStream) {
             useCustomSource = true;
-            customSource[0].m_input.readFrom(*params.m_testInputStream);
+            s_customSource[0].m_input.readFrom(*params.m_testInputStream);
         }
         if (params.m_testOutputStream) {
             useCustomSource = true;
-            customSource[0].m_output.readFrom(*params.m_testOutputStream);
+            s_customSource[0].m_output.readFrom(*params.m_testOutputStream);
         }
         if (useCustomSource) {
             auto& customList = getTestCaseSourceList();
             customList.resize(1);
             customList[0].m_sourceName = params.useStdin() ? "cli-stdin" : "cli-file";
-            customList[0].m_cases      = &customSource;
+            customList[0].m_cases      = &s_customSource;
         }
+        s_loadDone = true;
     }
 
     static bool runTests(const CLIParams& params, const Solution& solution, bool needCheck)
