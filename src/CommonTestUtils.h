@@ -227,6 +227,7 @@ struct AbstractProblem final {
             topCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls, Perf::TimeSpentAlloc });
         size_t count = 0;
         sortTestCaseSourceList();
+
         for (const TestCaseSource& tcaseSource : getTestCaseSourceList()) {
             for (int tcaseIndex = -1; const TestCase& tcase : *tcaseSource.m_cases) {
                 tcaseIndex++;
@@ -236,12 +237,14 @@ struct AbstractProblem final {
                 PerformanceCounter caseCounter(std::array{ Perf::ExecTime });
                 if (params.m_enableAllocTrace)
                     caseCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls });
-                const auto calculatedOutput = solution.m_transform(tcase.m_input);
-
-                if (needCheck) {
-                    if (params.m_printAllCases) {
-                        logger << "Case " << tcaseIndexStr;
-                        caseCounter.printTo(logger, true);
+                
+                {
+                    const auto calculatedOutput = solution.m_transform(tcase.m_input);
+                    if (!needCheck) {
+                        tcase.m_output.writeTo(*params.m_printStream);
+                        *params.m_printStream << "\n"
+                                              << std::flush;
+                        continue;
                     }
                     if (calculatedOutput != tcase.m_output) {
                         const std::string tcaseIndexPad(tcaseIndexStr.size(), ' ');
@@ -257,15 +260,17 @@ struct AbstractProblem final {
                                << std::flush;
                         return false;
                     }
-                } else {
-                    tcase.m_output.writeTo(*params.m_printStream);
-                    *params.m_printStream << "\n"
-                                          << std::flush;
+                }
+                if (params.m_printAllCases) {
+                    logger << "Case " << tcaseIndexStr;
+                    caseCounter.printTo(logger, true);
                 }
             }
         }
+
         if (!needCheck)
             return true;
+
         logger << "Solutions are correct, total cases: " << count;
         topCounter.printTo(logger, true);
         return true;
