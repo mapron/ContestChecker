@@ -26,7 +26,10 @@ else()
 	target_sources(ContestChecker PRIVATE src/DefaultAlloc.cpp)
 endif()
 
+if (${CMAKE_VERSION} VERSION_GREATER "3.29")
 cmake_policy(SET CMP0167 OLD)
+endif()
+
 find_package(Boost)
 
 target_include_directories(ContestChecker PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_LIST_DIR}/src)
