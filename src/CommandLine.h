@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <climits>
 #include <cstdint>
 #include <map>
 #include <memory>

@@ -6,6 +6,7 @@
 #pragma once
 
 #include <algorithm>
+#include <climits>
 #include <concepts>
 #include <cstdint>
 #include <iostream>

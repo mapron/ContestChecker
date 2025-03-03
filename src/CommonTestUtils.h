@@ -221,10 +221,10 @@ struct AbstractProblem final {
 
         registerCustomSource(params);
 
-        PerformanceCounter topCounter(std::array{ Perf::ExecTime, Perf::CpuClock });
+        PerformanceCounter topCounter(std::array<Perf, 2>{ Perf::ExecTime, Perf::CpuClock });
 
         if (params.m_enableAllocTrace)
-            topCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls, Perf::TimeSpentAlloc });
+            topCounter.enablePerf(std::array<Perf, 3>{ Perf::NewCalls, Perf::DeleteCalls, Perf::TimeSpentAlloc });
         size_t count = 0;
         sortTestCaseSourceList();
 
@@ -234,10 +234,10 @@ struct AbstractProblem final {
                 count++;
                 const std::string tcaseIndexStr = "[" + std::string(tcaseSource.m_sourceName) + "/" + std::to_string(tcaseIndex) + "]";
 
-                PerformanceCounter caseCounter(std::array{ Perf::ExecTime });
+                PerformanceCounter caseCounter(Perf::ExecTime);
                 if (params.m_enableAllocTrace)
-                    caseCounter.enablePerf(std::array{ Perf::NewCalls, Perf::DeleteCalls });
-                
+                    caseCounter.enablePerf(std::array<Perf, 2>{ Perf::NewCalls, Perf::DeleteCalls });
+
                 {
                     const auto calculatedOutput = solution.m_transform(tcase.m_input);
                     if (!needCheck) {
@@ -287,7 +287,7 @@ struct AbstractProblem final {
                << std::flush;
         registerCustomSource(params);
 
-        PerformanceCounter topCounter(std::array{ Perf::ExecTime });
+        PerformanceCounter topCounter(Perf::ExecTime);
         if (params.m_enableAllocTrace)
             topCounter.enablePerf(Perf::TimeSpentAlloc);
         int iterationCount = 0;
