@@ -5,21 +5,21 @@
  */
 #pragma once
 
+#include <algorithm>
 #include <concepts>
 #include <cstdint>
 #include <iostream>
-#include <sstream>
 #include <span>
+#include <sstream>
 #include <string>
 #include <vector>
 
 namespace CommonTypes::Details {
 
-
 template<size_t N>
 struct CompileTimeLiteral {
     char m_chars[N] = {};
-    
+
     consteval CompileTimeLiteral(const char (&str)[N])
     {
         std::copy_n(str, N, m_chars);
@@ -28,20 +28,20 @@ struct CompileTimeLiteral {
 
 template<class P>
 concept Loggable = requires(P p, std::ostream& os) {
-    requires std::same_as<decltype(p.log(os)), void>;
-};
+                       requires std::same_as<decltype(p.log(os)), void>;
+                   };
 
 template<class T>
 concept Numeric = std::integral<T> || std::floating_point<T>;
 
 template<class P>
 concept OstreamWriteable = requires(P p, std::ostream& os) {
-    requires std::same_as<decltype(p.writeTo(os)), void>;
-};
+                               requires std::same_as<decltype(p.writeTo(os)), void>;
+                           };
 template<class P>
 concept IstreamReadable = requires(P p, std::istream& is) {
-    requires std::same_as<decltype(p.readFrom(is)), void>;
-};
+                              requires std::same_as<decltype(p.readFrom(is)), void>;
+                          };
 
 template<Numeric T>
 inline void logValue(std::ostream& os, const T& value)
@@ -123,6 +123,5 @@ inline void logArray(std::ostream& os, const std::vector<T>& values)
 {
     return logArray(os, std::span<const T>(values.data(), values.size()));
 }
-
 
 }
